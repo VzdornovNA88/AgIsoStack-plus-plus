@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+if(ARM_NONE_EABI_PLATFORM)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+endif()
+
 project(
   isobus
   VERSION 0.1
@@ -11,6 +15,10 @@ project(
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+if(ARM_NONE_EABI_PLATFORM)
+  include(cmake/arm-none-eabi.cmake)
+endif()
+
 # Make CTest available and the BUILD_TESTING option (OFF by default)
 option(BUILD_TESTING "Set to ON to enable building of tests from top level" OFF)
 include(CTest)
@@ -21,7 +29,9 @@ if(BUILD_TESTING
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
 endif()
 
-if(ESP_PLATFORM)
+if(ARM_NONE_EABI_PLATFORM)
+  add_compile_options(-Wall -Wextra)
+elseif(ESP_PLATFORM)
   add_compile_options(-Wall -Wextra)
 elseif(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -33,6 +43,10 @@ option(
   CAN_STACK_DISABLE_THREADS
   "Set to ON to disable multi-threading, which removes the need for std::thread, std::mutex, and related libraries."
   OFF)
+
+if(ARM_NONE_EABI_PLATFORM AND NOT CAN_STACK_DISABLE_THREADS)
+  set(CAN_STACK_DISABLE_THREADS ON CACHE BOOL "Set to ON to disable multi-threading, which removes the need for std::thread, std::mutex, and related libraries." FORCE)
+endif()
 if(NOT CAN_STACK_DISABLE_THREADS AND NOT ARDUINO)
   # Find packages required for Threading
   set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -62,19 +76,21 @@ add_subdirectory("hardware_integration")
 option(BUILD_EXAMPLES "Set to ON to enable building of examples from top level"
        OFF)
 if(BUILD_EXAMPLES)
-  add_subdirectory("examples/transport_layer")
-  add_subdirectory("examples/diagnostic_protocol")
-  add_subdirectory("examples/pgn_requests")
-  add_subdirectory("examples/nmea2000/fast_packet_protocol")
-  add_subdirectory("examples/nmea2000/nmea2000_generator")
-  add_subdirectory("examples/nmea2000/nmea2000_parser")
-  add_subdirectory("examples/virtual_terminal/version3_object_pool")
-  add_subdirectory("examples/virtual_terminal/aux_functions")
-  add_subdirectory("examples/virtual_terminal/aux_inputs")
-  add_subdirectory("examples/virtual_terminal/iop_parser_tester")
-  add_subdirectory("examples/task_controller_client")
-  add_subdirectory("examples/task_controller_server")
-  add_subdirectory("examples/guidance")
+  if(NOT ARM_NONE_EABI_PLATFORM)
+    add_subdirectory("examples/transport_layer")
+    add_subdirectory("examples/diagnostic_protocol")
+    add_subdirectory("examples/pgn_requests")
+    add_subdirectory("examples/nmea2000/fast_packet_protocol")
+    add_subdirectory("examples/nmea2000/nmea2000_generator")
+    add_subdirectory("examples/nmea2000/nmea2000_parser")
+    add_subdirectory("examples/virtual_terminal/version3_object_pool")
+    add_subdirectory("examples/virtual_terminal/aux_functions")
+    add_subdirectory("examples/virtual_terminal/aux_inputs")
+    add_subdirectory("examples/virtual_terminal/iop_parser_tester")
+    add_subdirectory("examples/task_controller_client")
+    add_subdirectory("examples/task_controller_server")
+    add_subdirectory("examples/guidance")
+  endif()
   add_subdirectory("examples/seeder_example")
 endif()
 
@@ -82,7 +98,7 @@ if(BUILD_TESTING)
   add_subdirectory("test")
 endif()
 
-if(ESP_PLATFORM)
+if(ARM_NONE_EABI_PLATFORM OR ESP_PLATFORM)
   return()
 endif()
 
